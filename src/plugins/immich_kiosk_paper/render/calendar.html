@@ -24,7 +24,7 @@
 </div>
 
 <script>
-    const events = {{ events | tojson }};
+    const events = {{ (events | default([])) | tojson }};
 
     document.addEventListener('DOMContentLoaded', function () {
         const calendarEl = document.getElementById('calendar');
@@ -37,10 +37,10 @@
         };
 
         const calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: '{{ view }}',
+            initialView: '{{ view | default("dayGridMonth") }}',
             events: events,
-            now: '{{ current_dt }}',
-            timeZone: '{{ timezone }}',
+            now: '{{ current_dt | default("") }}',
+            timeZone: '{{ timezone | default("local") }}',
             contentHeight: '100%',
             slotDuration: '01:00:00',
             expandRows: true,

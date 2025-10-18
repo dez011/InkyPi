@@ -31,13 +31,13 @@ class ImmichKioskPaper(BasePlugin):
         logger.info(f"Grabbing image from: {url}")
 
         template_params = {
-            # "view": view,
-            # "events": events,
-            # "current_dt": current_dt.replace(minute=0, second=0, microsecond=0).isoformat(),
-            # "timezone": timezone,
             "plugin_settings": settings,
-            # "time_format": time_format,
-            # "font_scale": FONT_SIZES.get(settings.get("fontSize", "normal"))
+            "view": "dayGridMonth",
+            "events": [],
+            "current_dt": datetime.now(),
+            "timezone": "local",
+            "time_format": "24h",
+            "font_scale": 1.0,
         }
 
         # image = grab_image(url, dimensions, timeout_ms=40000)
