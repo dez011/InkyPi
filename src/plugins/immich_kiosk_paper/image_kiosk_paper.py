@@ -30,7 +30,18 @@ class ImmichKioskPaper(BasePlugin):
 
         logger.info(f"Grabbing image from: {url}")
 
-        image = grab_image(url, dimensions, timeout_ms=40000)
+        template_params = {
+            # "view": view,
+            # "events": events,
+            # "current_dt": current_dt.replace(minute=0, second=0, microsecond=0).isoformat(),
+            # "timezone": timezone,
+            "plugin_settings": settings,
+            # "time_format": time_format,
+            # "font_scale": FONT_SIZES.get(settings.get("fontSize", "normal"))
+        }
+
+        # image = grab_image(url, dimensions, timeout_ms=40000)
+        image = self.render_image(dimensions, "calendar.html", "calendar.css", template_params)
 
         if not image:
             raise RuntimeError("Failed to load image, please check logs.")
