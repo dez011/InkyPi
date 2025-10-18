@@ -4,6 +4,8 @@ from io import BytesIO
 import requests
 import logging
 
+from src.plugins.calendar.constants import FONT_SIZES
+
 logger = logging.getLogger(__name__)
 
 def grab_image(image_url, dimensions, timeout_ms=40000):
@@ -37,7 +39,7 @@ class ImmichKioskPaper(BasePlugin):
             # "timezone": timezone,
             "plugin_settings": settings,
             # "time_format": time_format,
-            # "font_scale": FONT_SIZES.get(settings.get("fontSize", "normal"))
+            "font_scale": FONT_SIZES.get(settings.get("fontSize", "normal"))
         }
 
         # image = grab_image(url, dimensions, timeout_ms=40000)
