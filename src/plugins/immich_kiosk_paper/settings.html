@@ -1,17 +1,68 @@
 <div class="form-group">
-    <label for="url" class="form-label">Image URL:</label>
-    <input type="text" id="url" name="url" placeholder="Type something..." required class="form-input">
+  <label for="url" class="form-label">URL:</label>
+  <input type="text" id="url" name="url"
+         placeholder="http://192.168.1.169:3000"
+         class="form-input" />
 </div>
 
 <div class="form-group">
-    <span>Warning: Do not run this with untrusted URLs, as it may pose a security risk. This may also fail if the image takes too long to load.</span>
+  <label for="interval" class="form-label">Interval (seconds):</label>
+  <input type="number" id="interval" name="interval" min="1" step="1"
+         placeholder="900" class="form-input" />
+  <small class="form-hint">Default: 900 (15 minutes)</small>
+</div>
+
+<div class="form-group">
+  <label class="form-label">Run Control:</label>
+  <button type="button" id="startBtn" class="btn">Start</button>
+  <button type="button" id="stopBtn" class="btn btn-secondary">Stop</button>
+  <small class="form-hint">Start clears “paused”. Stop sets “paused”.</small>
 </div>
 
 <script>
-    // populate form values from plugin settings
-    document.addEventListener('DOMContentLoaded', () => {        
-        if (loadPluginSettings) {
-            document.getElementById('url').value = pluginSettings.url;
-        }
+  const DEFAULT_URL = "http://192.168.1.169:3000";
+  const DEFAULT_INTERVAL = 900;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const urlEl = document.getElementById("url");
+    const intEl = document.getElementById("interval");
+
+    if (typeof pluginSettings !== "undefined" && pluginSettings) {
+      urlEl.value = (pluginSettings.url || DEFAULT_URL).trim();
+      intEl.value = parseInt(pluginSettings.interval ?? DEFAULT_INTERVAL, 10) || DEFAULT_INTERVAL;
+    } else {
+      urlEl.value = DEFAULT_URL;
+      intEl.value = DEFAULT_INTERVAL;
+    }
+
+    document.getElementById("startBtn").addEventListener("click", () => {
+      if (typeof savePluginSettings === "function") {
+        savePluginSettings({
+          ...pluginSettings,
+          url: (urlEl.value || DEFAULT_URL).trim(),
+          interval: parseInt(intEl.value || DEFAULT_INTERVAL, 10) || DEFAULT_INTERVAL,
+          paused: "false"
+        });
+      }
     });
+
+    document.getElementById("stopBtn").addEventListener("click", () => {
+      if (typeof savePluginSettings === "function") {
+        savePluginSettings({
+          ...pluginSettings,
+          url: (urlEl.value || DEFAULT_URL).trim(),
+          interval: parseInt(intEl.value || DEFAULT_INTERVAL, 10) || DEFAULT_INTERVAL,
+          paused: "true"
+        });
+      }
+    });
+  });
+
+  // Optional helper if your framework expects it:
+  window.getPluginSettings = function () {
+    const url = (document.getElementById("url").value || DEFAULT_URL).trim();
+    const raw = document.getElementById("interval").value;
+    const interval = Math.max(1, parseInt(raw || DEFAULT_INTERVAL, 10) || DEFAULT_INTERVAL);
+    return { url, interval, paused: "false" };
+  };
 </script>
