@@ -42,6 +42,8 @@ def load_plugins(plugins_config):
 
 def get_plugin_instance(plugin_config):
     plugin_id = plugin_config.get("id")
+    logging.info(plugin_config)
+    logging.info(PLUGIN_CLASSES)
     # Retrieve the plugin class factory function
     plugin_class = PLUGIN_CLASSES.get(plugin_id)
     
