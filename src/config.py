@@ -50,6 +50,8 @@ class Config:
                         plugin_info = json.load(f)
                     plugins_list.append(plugin_info)
 
+        print("plugins: ")
+        print(plugins_list)
         return plugins_list
 
     def write_config(self):
