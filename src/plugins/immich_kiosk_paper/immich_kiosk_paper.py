@@ -78,6 +78,7 @@ class ImmichKioskPaper(BasePlugin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._worker: Optional[_ScreenshotWorker] = None
+        self._loop_enabled: bool = True  # default: loop runs
 
     def generate_image(self, settings, device_config):
         settings = settings or {}
@@ -90,7 +91,13 @@ class ImmichKioskPaper(BasePlugin):
             interval_sec = DEFAULT_INTERVAL_SEC
         if interval_sec < 1:
             interval_sec = DEFAULT_INTERVAL_SEC
-        paused = str(settings.get("paused", "false")).lower() == "true"
+
+        # If UI sends a toggle request (e.g., the same Update button), flip loop state
+        # Accept truthy strings like "true", "1", etc.
+        toggle_req = str(settings.get("toggle_loop", "false")).lower() in ("true", "1", "yes", "on")
+        if toggle_req:
+            self._loop_enabled = not self._loop_enabled
+            logger.info(f"[ImmichKioskPaper] Toggled loop -> {self._loop_enabled}")
 
         # dynamic dimensions callable (handles orientation each time)
         def _dims():
@@ -99,26 +106,36 @@ class ImmichKioskPaper(BasePlugin):
                 dims = dims[::-1]
             return dims
 
-        # Start or update the background worker
-        if self._worker is None:
-            self._worker = _ScreenshotWorker(url=url, get_dimensions=_dims, interval_sec=interval_sec, paused=paused)
-            self._worker.start()
-            logger.info(f"[ImmichKioskPaper] Started worker for {url} (interval={interval_sec}s, paused={paused})")
+        # Start/Stop worker based on loop flag
+        if self._loop_enabled:
+            if self._worker is None:
+                self._worker = _ScreenshotWorker(url=url, get_dimensions=_dims, interval_sec=interval_sec, paused=False)
+                self._worker.start()
+                logger.info(f"[ImmichKioskPaper] Started worker for {url} (interval={interval_sec}s)")
+            else:
+                self._worker.update(url=url, interval_sec=interval_sec, paused=False)
         else:
-            self._worker.update(url=url, interval_sec=interval_sec, paused=paused)
+            if self._worker is not None:
+                self._worker.stop()
+                self._worker = None
+                logger.info("[ImmichKioskPaper] Worker stopped (loop disabled)")
 
-        # Return the most recent image; if none yet, do a synchronous first capture
-        img = self._worker.get_last_image() if self._worker else None
-        if img is None and not paused:
+        # Return the most recent image; if none yet and loop enabled, do a synchronous first capture
+        img = self._worker.get_last_image() if (self._loop_enabled and self._worker) else None
+        if img is None and self._loop_enabled:
             dims = _dims()
             logger.info(f"[ImmichKioskPaper] First run capture of {url} at {dims}")
             img = take_screenshot(url, dims, timeout_ms=40000)
             if img is not None and self._worker:
-                # prime the cache
-                self._worker.update()  # no-op, just ensures lock familiarity
                 with self._worker._lock:
                     self._worker._last_image = img
 
+        # If loop is disabled, do a one-shot capture so Update still returns something
+        if not self._loop_enabled:
+            dims = _dims()
+            logger.info(f"[ImmichKioskPaper] One-shot capture (loop off) of {url} at {dims}")
+            img = take_screenshot(url, dims, timeout_ms=40000)
+
         if img is None:
-            raise RuntimeError("No screenshot available yet (still initializing or paused).")
+            raise RuntimeError("No screenshot available yet (initializing) or capture failed.")
         return img
