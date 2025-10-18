@@ -1,5 +1,4 @@
 from datetime import datetime
-import time
 
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.image_utils import take_screenshot
@@ -17,17 +16,15 @@ class ImmichKioskPaper(BasePlugin):
         if not url:
             raise RuntimeError("URL is required.")
 
-        while True:
-            dimensions = device_config.get_resolution()
-            if device_config.get_config("orientation") == "vertical":
-                dimensions = dimensions[::-1]
+        dimensions = device_config.get_resolution()
+        if device_config.get_config("orientation") == "vertical":
+            dimensions = dimensions[::-1]
 
-            logger.info(f"Taking screenshot of url: {url}")
+        logger.info(f"Taking screenshot of url: {url}")
 
-            image = take_screenshot(url, dimensions, timeout_ms=40000)
-            if not image:
-                logger.error("Failed to take screenshot, please check logs.")
-            else:
-                logger.info("Screenshot taken successfully.")
+        image = take_screenshot(url, dimensions, timeout_ms=40000)
 
-            time.sleep(10)
+        if not image:
+            raise RuntimeError("Failed to take screenshot, please check logs.")
+
+        return image
