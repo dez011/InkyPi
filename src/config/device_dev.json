@@ -2,5 +2,48 @@
     "name": "InkyPi Development",
     "display_type": "mock",
     "resolution": [800, 480],
-    "orientation": "horizontal"
+    "orientation": "horizontal",
+
+    "playlist_config": {
+        "playlists": [
+            {
+                "name": "b",
+                "start_time": "00:30",
+                "end_time": "23:00",
+                "plugins": [
+                    {
+                        "plugin_id": "screenshot",
+                        "name": "b",
+                        "plugin_settings": {
+                            "url": "http://192.168.1.169:3000"
+                        },
+                        "refresh": {
+                            "interval": 180
+                        },
+                        "latest_refresh_time": "2025-12-16T22:23:23.552893-06:00"
+                    }
+                ],
+                "current_plugin_index": 0
+            }
+        ],
+        "active_playlist": "b"
+    },
+    "refresh_info": {
+        "refresh_time": "2025-12-16T22:25:48.659777-06:00",
+        "image_hash": "241d713cb20d4a32e78c5a5183c18a3b412be229a9cd661f7290de5e30cb4413",
+        "refresh_type": "Playlist",
+        "plugin_id": "screenshot",
+        "playlist": "b",
+        "plugin_instance": "b"
+    },
+    "log_system_stats": null,
+    "timezone": "America/Chicago",
+    "time_format": "12h",
+    "plugin_cycle_interval_seconds": 60,
+    "image_settings": {
+        "saturation": 1.0,
+        "brightness": 1.0,
+        "sharpness": 1.0,
+        "contrast": 1.0
+    }
 }

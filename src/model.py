@@ -54,7 +54,7 @@ class RefreshInfo:
             refresh_type=data.get("refresh_type"),
             plugin_id=data.get("plugin_id"),
             playlist=data.get("playlist"),
-            plugin_instance=data.get("plugin_instance")
+            plugin_instance=data.get("plugin_instance"),
         )
 
 class PlaylistManager:
@@ -175,15 +175,18 @@ class Playlist:
         current_plugin_index (int): Index of the currently active plugin in the playlist.
     """
 
-    def __init__(self, name, start_time, end_time, plugins=None, current_plugin_index=None):
+    def __init__(self, name, start_time, end_time, plugins=None, current_plugin_index=None, always_active=False):
         self.name = name
         self.start_time = start_time
         self.end_time = end_time
         self.plugins = [PluginInstance.from_dict(p) for p in (plugins or [])]
         self.current_plugin_index = current_plugin_index
+        self.always_active = always_active
 
     def is_active(self, current_time):
         """Check if the playlist is active at the given time."""
+        if self.always_active:
+            return True
         return self.start_time <= current_time < self.end_time
 
     def add_plugin(self, plugin_data):
@@ -248,7 +251,8 @@ class Playlist:
             "start_time": self.start_time,
             "end_time": self.end_time,
             "plugins": [p.to_dict() for p in self.plugins],
-            "current_plugin_index": self.current_plugin_index
+            "current_plugin_index": self.current_plugin_index,
+            "always_active": self.always_active
         }
 
     @classmethod
@@ -258,7 +262,8 @@ class Playlist:
             start_time=data["start_time"],
             end_time=data["end_time"],
             plugins=data["plugins"],
-            current_plugin_index=data.get("current_plugin_index", None)
+            current_plugin_index=data.get("current_plugin_index", None),
+            always_active=data.get("always_active", False)
         )
 
 class PluginInstance:
