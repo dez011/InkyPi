@@ -25,7 +25,9 @@ def grab_image(image_url, dimensions, timeout_ms=40000):
 class ImageURL(BasePlugin):
     def generate_image(self, settings, device_config):
         url = settings.get('url')
+        print("*****before")
         refresh_interval_minutes = settings.get('refresh_interval_minutes', 0)
+        print("&&&&&&after " + refresh_interval_minutes)
         logger.debug(
             f"ImageURL refresh_interval_minutes: {refresh_interval_minutes}"
         )
