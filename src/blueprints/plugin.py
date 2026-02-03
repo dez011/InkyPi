@@ -31,7 +31,10 @@ def plugin_page(plugin_id):
                     return jsonify({"error": f"Plugin instance: {plugin_instance_name} does not exist"}), 500
 
                 # add plugin instance settings to the template to prepopulate
-                template_params["plugin_settings"] = plugin_instance.settings
+                # NOTE: refresh_interval_minutes is stored on the plugin instance, not inside settings
+                prepop_settings = dict(plugin_instance.settings or {})
+                prepop_settings["refresh_interval_minutes"] = getattr(plugin_instance, "refresh_interval_minutes", 0)
+                template_params["plugin_settings"] = prepop_settings
                 template_params["plugin_instance"] = plugin_instance_name
 
             template_params["playlists"] = playlist_manager.get_playlist_names()
@@ -46,27 +49,27 @@ def plugin_page(plugin_id):
 def image(plugin_id, filename):
     # Resolve plugins directory dynamically
     plugins_dir = resolve_path("plugins")
-    
+
     # Construct the full path to the plugin's file
     plugin_dir = os.path.join(plugins_dir, plugin_id)
-    
+
     # Security check to prevent directory traversal
     safe_path = os.path.abspath(os.path.join(plugin_dir, filename))
     if not safe_path.startswith(os.path.abspath(plugin_dir)):
         return "Invalid path", 403
-    
+
     # Convert to absolute path for send_from_directory
     abs_plugin_dir = os.path.abspath(plugin_dir)
-    
+
     # Check if the directory and file exist
     if not os.path.isdir(abs_plugin_dir):
         logger.error(f"Plugin directory not found: {abs_plugin_dir}")
         return "Plugin directory not found", 404
-        
+
     if not os.path.isfile(safe_path):
         logger.error(f"File not found: {safe_path}")
         return "File not found", 404
-    
+
     # Serve the file from the plugin directory
     return send_from_directory(abs_plugin_dir, filename)
 
@@ -112,11 +115,18 @@ def update_plugin_instance(instance_name):
         plugin_settings.update(handle_request_files(request.files, request.form))
 
         plugin_id = plugin_settings.pop("plugin_id")
+        # refresh_interval_minutes is a top-level PluginInstance field (not part of plugin_settings)
+        minutes_raw = plugin_settings.pop("refresh_interval_minutes", None)
+        try:
+            refresh_minutes = int(minutes_raw) if minutes_raw not in (None, "", "null") else 0
+        except (ValueError, TypeError):
+            refresh_minutes = 0
         plugin_instance = playlist_manager.find_plugin(plugin_id, instance_name)
         if not plugin_instance:
             return jsonify({"error": f"Plugin instance: {instance_name} does not exist"}), 500
 
         plugin_instance.settings = plugin_settings
+        plugin_instance.refresh_interval_minutes = refresh_minutes
         device_config.write_config()
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
@@ -158,6 +168,12 @@ def update_now():
         plugin_settings = parse_form(request.form)
         plugin_settings.update(handle_request_files(request.files))
         plugin_id = plugin_settings.pop("plugin_id")
+        minutes_raw = plugin_settings.get("refresh_interval_minutes", None)
+        if minutes_raw is not None:
+            try:
+                plugin_settings["refresh_interval_minutes"] = int(minutes_raw) if minutes_raw not in ("", "null") else 0
+            except (ValueError, TypeError):
+                plugin_settings["refresh_interval_minutes"] = 0
 
         # Check if refresh task is running
         if refresh_task.running:
