@@ -41,7 +41,8 @@ class Config:
         plugins_list = []
         for plugin in sorted(os.listdir(os.path.join(self.BASE_DIR, "plugins"))):
             plugin_path = os.path.join(self.BASE_DIR, "plugins", plugin)
-            if os.path.isdir(plugin_path) and plugin in ("image_url", "clock"):
+            if os.path.isdir(plugin_path): # and plugin in ("image_url", "clock"):
+                print("plugin "+ plugin)
                 # Check if the plugin-info.json file exists
                 plugin_info_file = os.path.join(plugin_path, "plugin-info.json")
                 if os.path.isfile(plugin_info_file):
