@@ -34,7 +34,7 @@ class ImageURL(BasePlugin):
 
         config = Config()
         plugin_config = config.get_plugin("image_url")
-        config.update_value("refresh_interval_minutes", 5, write=True)
+        config.update_value("refresh_interval_minutes", refresh_interval_minutes, write=True)
 
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":
