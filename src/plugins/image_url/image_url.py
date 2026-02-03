@@ -3,7 +3,7 @@ from PIL import Image
 from io import BytesIO
 import requests
 import logging
-from src.config import Config
+# from src.config import Config
 
 
 # src/plugins/image_url
@@ -32,9 +32,9 @@ class ImageURL(BasePlugin):
         if not url:
             raise RuntimeError("URL is required.")
 
-        config = Config()
-        plugin_config = config.get_plugin("image_url")
-        config.update_value("refresh_interval_minutes", refresh_interval_minutes, write=True)
+        # config = Config()
+        # plugin_config = config.get_plugin("image_url")
+        # config.update_value("refresh_interval_minutes", refresh_interval_minutes, write=True)
 
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":

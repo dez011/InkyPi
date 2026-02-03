@@ -2,5 +2,5 @@
     "display_name": "Image URL",
     "id": "image_url",
     "class": "ImageURL",
-    "refresh_interval_minutes": 0
+    "refresh_interval_minutes": 1
 }
