@@ -1,5 +1,6 @@
 {
     "display_name": "Image URL",
     "id": "image_url",
-    "class": "ImageURL"
+    "class": "ImageURL",
+    "refresh_interval_minutes": 0
 }

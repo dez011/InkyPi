@@ -4,14 +4,65 @@
 </div>
 
 <div class="form-group">
+    <label for="refresh_interval_minutes" class="form-label">
+        Refresh Interval (minutes):
+    </label>
+    <input type="number"
+           id="refresh_interval_minutes"
+           name="refresh_interval_minutes"
+           min="0"
+           step="1"
+           placeholder="0 = use legacy interval"
+           class="form-input">
+    <span class="form-hint">
+        Set to 0 to use legacy interval (seconds). Any value > 0 refreshes every N minutes.
+    </span>
+</div>
+
+<div class="form-group">
     <span>Warning: Do not run this with untrusted URLs, as it may pose a security risk. This may also fail if the image takes too long to load.</span>
 </div>
 
 <script>
     // populate form values from plugin settings
-    document.addEventListener('DOMContentLoaded', () => {        
+    document.addEventListener('DOMContentLoaded', () => {
         if (loadPluginSettings) {
-            document.getElementById('url').value = pluginSettings.url;
+            document.getElementById('url').value = pluginSettings.url || '';
+
+            const minutesInput = document.getElementById('refresh_interval_minutes');
+            if (pluginSettings.refresh_interval_minutes !== undefined) {
+                minutesInput.value = pluginSettings.refresh_interval_minutes;
+            } else {
+                minutesInput.value = 0;
+            }
         }
     });
+
+    function getAdditionalPluginSettings() {
+        return {
+            refresh_interval_minutes: parseInt(
+                document.getElementById('refresh_interval_minutes').value || 0,
+                10
+            )
+        };
+    }
 </script>
+
+
+<!--<div class="form-group">-->
+<!--    <label for="url" class="form-label">Image URL:</label>-->
+<!--    <input type="text" id="url" name="url" placeholder="Type something..." required class="form-input">-->
+<!--</div>-->
+
+<!--<div class="form-group">-->
+<!--    <span>Warning: Do not run this with untrusted URLs, as it may pose a security risk. This may also fail if the image takes too long to load.</span>-->
+<!--</div>-->
+
+<!--<script>-->
+<!--    // populate form values from plugin settings-->
+<!--    document.addEventListener('DOMContentLoaded', () => {        -->
+<!--        if (loadPluginSettings) {-->
+<!--            document.getElementById('url').value = pluginSettings.url;-->
+<!--        }-->
+<!--    });-->
+<!--</script>-->

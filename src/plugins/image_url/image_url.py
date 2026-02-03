@@ -3,7 +3,11 @@ from PIL import Image
 from io import BytesIO
 import requests
 import logging
+from src.config import Config
 
+
+# src/plugins/image_url
+#/Users/miguelhernandez/Documents/GitHub/InkyPi/src/config.py
 logger = logging.getLogger(__name__)
 
 def grab_image(image_url, dimensions, timeout_ms=40000):
@@ -21,8 +25,16 @@ def grab_image(image_url, dimensions, timeout_ms=40000):
 class ImageURL(BasePlugin):
     def generate_image(self, settings, device_config):
         url = settings.get('url')
+        refresh_interval_minutes = settings.get('refresh_interval_minutes', 0)
+        logger.debug(
+            f"ImageURL refresh_interval_minutes: {refresh_interval_minutes}"
+        )
         if not url:
             raise RuntimeError("URL is required.")
+
+        config = Config()
+        plugin_config = config.get_plugin("image_url")
+        config.update_value("refresh_interval_minutes", 5, write=True)
 
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":

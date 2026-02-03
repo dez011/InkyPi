@@ -277,12 +277,13 @@ class PluginInstance:
         latest_refresh (str): ISO-formatted string representing the last refresh time.
     """
 
-    def __init__(self, plugin_id, name, settings, refresh, latest_refresh_time=None):
+    def __init__(self, plugin_id, name, settings, refresh, latest_refresh_time=None, refresh_interval_minutes=0):
         self.plugin_id = plugin_id
         self.name = name
         self.settings = settings
         self.refresh = refresh
         self.latest_refresh_time = latest_refresh_time
+        self.refresh_interval_minutes = refresh_interval_minutes
 
     def update(self, updated_data):
         """Update attributes of the class with the dictionary values."""
@@ -295,11 +296,17 @@ class PluginInstance:
         if not latest_refresh_dt:
             return True
 
-        # Check for interval-based refresh
-        if "interval" in self.refresh:
-            interval = self.refresh.get("interval")
-            if interval and (current_time - latest_refresh_dt) >= timedelta(seconds=interval):
+        # New: minute-based refresh using top-level property.
+        # If refresh_interval_minutes is > 0, it takes precedence.
+        if getattr(self, "refresh_interval_minutes", 0) and self.refresh_interval_minutes > 0:
+            if (current_time - latest_refresh_dt) >= timedelta(minutes=self.refresh_interval_minutes):
                 return True
+        else:
+            # Legacy: second-based refresh using refresh["interval"].
+            if "interval" in self.refresh:
+                interval = self.refresh.get("interval")
+                if interval and (current_time - latest_refresh_dt) >= timedelta(seconds=interval):
+                    return True
 
         # Check for scheduled refresh (HH:MM format)
         if "scheduled" in self.refresh:
@@ -309,11 +316,11 @@ class PluginInstance:
             # If the latest refresh is before the scheduled time today
             if latest_refresh_str < scheduled_time_str:
                 return True
-        
+
         if "scheduled" in self.refresh:
             scheduled_time_str = self.refresh.get("scheduled")
             scheduled_time = datetime.strptime(scheduled_time_str, "%H:%M").time()
-            
+
             latest_refresh_date = latest_refresh_dt.date()
             current_date = current_time.date()
 
@@ -334,7 +341,7 @@ class PluginInstance:
         if self.latest_refresh_time:
             latest_refresh = datetime.fromisoformat(self.latest_refresh_time)
         return latest_refresh
-    
+
     def to_dict(self):
         return {
             "plugin_id": self.plugin_id,
@@ -342,6 +349,7 @@ class PluginInstance:
             "plugin_settings": self.settings,
             "refresh": self.refresh,
             "latest_refresh_time": self.latest_refresh_time,
+            "refresh_interval_minutes": getattr(self, "refresh_interval_minutes", 0),
         }
 
     @classmethod
@@ -352,4 +360,5 @@ class PluginInstance:
             settings=data["plugin_settings"],
             refresh=data["refresh"],
             latest_refresh_time=data.get("latest_refresh_time"),
+            refresh_interval_minutes=data.get("refresh_interval_minutes", 0),
         )
