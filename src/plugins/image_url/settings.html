@@ -27,14 +27,25 @@
     // populate form values from plugin settings
     document.addEventListener('DOMContentLoaded', () => {
         if (loadPluginSettings) {
-            document.getElementById('url').value = pluginSettings.url || '';
+            document.getElementById('url').value = (pluginSettings && pluginSettings.url) ? pluginSettings.url : '';
 
             const minutesInput = document.getElementById('refresh_interval_minutes');
-            if (pluginSettings.refresh_interval_minutes !== undefined) {
-                minutesInput.value = pluginSettings.refresh_interval_minutes;
-            } else {
-                minutesInput.value = 0;
+
+            // refresh_interval_minutes may live either in pluginSettings OR on the plugin config object.
+            // Try multiple known globals / shapes before defaulting to 0.
+            let minutes = 0;
+
+            if (pluginSettings && pluginSettings.refresh_interval_minutes !== undefined) {
+                minutes = pluginSettings.refresh_interval_minutes;
+            } else if (typeof pluginConfig !== 'undefined' && pluginConfig && pluginConfig.refresh_interval_minutes !== undefined) {
+                minutes = pluginConfig.refresh_interval_minutes;
+            } else if (typeof pluginInfo !== 'undefined' && pluginInfo && pluginInfo.refresh_interval_minutes !== undefined) {
+                minutes = pluginInfo.refresh_interval_minutes;
+            } else if (typeof plugin !== 'undefined' && plugin && plugin.refresh_interval_minutes !== undefined) {
+                minutes = plugin.refresh_interval_minutes;
             }
+
+            minutesInput.value = (minutes === null || minutes === undefined || minutes === '') ? 0 : minutes;
         }
     });
 
