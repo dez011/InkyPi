@@ -27,7 +27,7 @@ class ImageURL(BasePlugin):
         url = settings.get('url')
         print("*****before")
         refresh_interval_minutes = settings.get('refresh_interval_minutes', 0)
-        print("&&&&&&after " + refresh_interval_minutes)
+        print(f"&&&&&&after {refresh_interval_minutes}")
         logger.debug(
             f"ImageURL refresh_interval_minutes: {refresh_interval_minutes}"
         )

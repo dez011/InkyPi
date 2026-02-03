@@ -13,7 +13,10 @@
            min="0"
            step="1"
            placeholder="0 = use legacy interval"
-           class="form-input">
+           class="form-input"
+           value="{{ (plugin_settings.get('refresh_interval_minutes') if plugin_settings is not none else none)
+                    if (plugin_settings is not none and plugin_settings.get('refresh_interval_minutes') not in (none, '', 'null'))
+                    else (plugin_info.get('refresh_interval_minutes') if plugin_info is not none and plugin_info.get('refresh_interval_minutes') is not none else 0) }}">
     <span class="form-hint">
         Set to 0 to use legacy interval (seconds). Any value > 0 refreshes every N minutes.
     </span>
@@ -26,16 +29,22 @@
 <script>
     // populate form values from plugin settings
     document.addEventListener('DOMContentLoaded', () => {
-        if (loadPluginSettings) {
-            document.getElementById('url').value = (pluginSettings && pluginSettings.url) ? pluginSettings.url : '';
+        // Only patch values if the input is empty; keep server-rendered value otherwise.
+        const minutesInput = document.getElementById('refresh_interval_minutes');
+        const urlInput = document.getElementById('url');
 
-            const minutesInput = document.getElementById('refresh_interval_minutes');
+        // URL: only set if empty
+        if (urlInput && !urlInput.value) {
+            if (typeof pluginSettings !== 'undefined' && pluginSettings && pluginSettings.url) {
+                urlInput.value = pluginSettings.url;
+            }
+        }
 
-            // refresh_interval_minutes may live either in pluginSettings OR on the plugin config object.
-            // Try multiple known globals / shapes before defaulting to 0.
-            let minutes = 0;
+        // Minutes: only set if empty
+        if (minutesInput && (minutesInput.value === '' || minutesInput.value === null || minutesInput.value === undefined)) {
+            let minutes = null;
 
-            if (pluginSettings && pluginSettings.refresh_interval_minutes !== undefined) {
+            if (typeof pluginSettings !== 'undefined' && pluginSettings && pluginSettings.refresh_interval_minutes !== undefined) {
                 minutes = pluginSettings.refresh_interval_minutes;
             } else if (typeof pluginConfig !== 'undefined' && pluginConfig && pluginConfig.refresh_interval_minutes !== undefined) {
                 minutes = pluginConfig.refresh_interval_minutes;
