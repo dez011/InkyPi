@@ -31,7 +31,7 @@ class ImageURL(BasePlugin):
         refresh_interval_minutes = settings.get('refresh_interval_minutes', 0)
         print(f"&&&&&&after {refresh_interval_minutes}")
         print(settings)
-        print(BasePlugin.config)
+        print(BasePlugin)
         print(BasePlugin.config.plugins_list)
         print(BasePlugin.config.config)
         print(BasePlugin.config.get_plugins())
