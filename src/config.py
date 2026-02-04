@@ -21,7 +21,9 @@ class Config:
 
     def __init__(self):
         self.config = self.read_config()
+        logger.info("\n\nLoaded device.json: %s", self.config_file)
         self.plugins_list = self.read_plugins_list()
+        logger.info(self.plugins_list)
         self.playlist_manager = self.load_playlist_manager()
         self.refresh_info = self.load_refresh_info()
 
@@ -41,7 +43,7 @@ class Config:
         plugins_list = []
         for plugin in sorted(os.listdir(os.path.join(self.BASE_DIR, "plugins"))):
             plugin_path = os.path.join(self.BASE_DIR, "plugins", plugin)
-            if os.path.isdir(plugin_path) and plugin in ("image_url", "clock"):
+            if os.path.isdir(plugin_path) and plugin in ("image_url", "clock", "screenshot"):
                 # Check if the plugin-info.json file exists
                 plugin_info_file = os.path.join(plugin_path, "plugin-info.json")
                 if os.path.isfile(plugin_info_file):
@@ -50,7 +52,7 @@ class Config:
                         plugin_info = json.load(f)
                     plugins_list.append(plugin_info)
 
-        print("plugins: ")
+        print("********************\n************\nplugins: ")
         print(plugins_list)
         return plugins_list
 
