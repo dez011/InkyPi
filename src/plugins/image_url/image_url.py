@@ -1,3 +1,5 @@
+import this
+
 from plugins.base_plugin.base_plugin import BasePlugin
 from PIL import Image
 from io import BytesIO
@@ -28,6 +30,15 @@ class ImageURL(BasePlugin):
         print("*****before")
         refresh_interval_minutes = settings.get('refresh_interval_minutes', 0)
         print(f"&&&&&&after {refresh_interval_minutes}")
+        print("settings; " + settings)
+        print("2"+ BasePlugin.config)
+        print("3"+BasePlugin.config.plugins_list)
+        print('4'+BasePlugin.config.config)
+        print('5'+BasePlugin.config.get_plugins())
+        print('6'+BasePlugin.config.read_config())
+        print('7'+BasePlugin.config.get_plugin("image_url"))
+
+
 
         logger.debug(
             f"ImageURL refresh_interval_minutes: {refresh_interval_minutes}"
