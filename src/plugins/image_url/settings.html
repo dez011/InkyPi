@@ -1,6 +1,8 @@
+{% set ps = plugin_settings|default({}) %}
+{% set pi = plugin_info|default({}) %}
 <div class="form-group">
     <label for="url" class="form-label">Image URL:</label>
-    <input type="text" id="url" name="url" placeholder="Type something..." required class="form-input">
+    <input type="text" id="url" name="url" placeholder="Type something..." required class="form-input" value="{{ ps.get('url','') }}">
 </div>
 
 <div class="form-group">
@@ -14,9 +16,7 @@
            step="1"
            placeholder="0 = use legacy interval"
            class="form-input"
-           value="{{ (plugin_settings.get('refresh_interval_minutes') if plugin_settings is not none else none)
-                    if (plugin_settings is not none and plugin_settings.get('refresh_interval_minutes') not in (none, '', 'null'))
-                    else (plugin_info.get('refresh_interval_minutes') if plugin_info is not none and plugin_info.get('refresh_interval_minutes') is not none else 0) }}">
+           value="{{ (ps.get('refresh_interval_minutes') if ps.get('refresh_interval_minutes') not in (none, '', 'null') else (pi.get('refresh_interval_minutes') if pi.get('refresh_interval_minutes') is not none else 0)) }}">
     <span class="form-hint">
         Set to 0 to use legacy interval (seconds). Any value > 0 refreshes every N minutes.
     </span>
