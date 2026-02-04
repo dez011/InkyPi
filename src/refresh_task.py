@@ -231,6 +231,8 @@ class ManualRefresh(RefreshAction):
 
     def execute(self, plugin, device_config, current_dt: datetime):
         """Performs a manual refresh using the stored plugin ID and settings."""
+        print('psettings')
+        print(self.plugin_settings)
         return plugin.generate_image(self.plugin_settings, device_config)
 
     def get_refresh_info(self):
