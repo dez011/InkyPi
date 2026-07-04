@@ -111,6 +111,12 @@ enable_interfaces(){
   echo_success "\tI2C Interface has been enabled."
 
   # Ensure both CS lines are enabled in config.txt, as required by Waveshare displays.
+  # Remove any single-CS overlay left over from an older Inky-targeted install -
+  # having both active at once is contradictory and breaks SPI communication.
+  if grep -E -q '^[[:space:]]*dtoverlay=spi0-0cs' /boot/firmware/config.txt; then
+      echo "Removing conflicting single-CS overlay (dtoverlay=spi0-0cs)"
+      sed -i '/^dtoverlay=spi0-0cs$/d' /boot/firmware/config.txt
+  fi
   echo "Enabling both CS lines for SPI interface in config.txt"
   if ! grep -E -q '^[[:space:]]*dtoverlay=spi0-2cs' /boot/firmware/config.txt; then
       sed -i '/^dtparam=spi=on/a dtoverlay=spi0-2cs' /boot/firmware/config.txt
