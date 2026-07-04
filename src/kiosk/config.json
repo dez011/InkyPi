@@ -1,6 +1,11 @@
 {
+    "mode": "kiosk",
+    "device_id": "inky",
     "url": "http://192.168.1.169:3000",
-    "resolution": [800, 480],
+    "resolution": [
+        800,
+        480
+    ],
     "orientation": "horizontal",
     "inverted_image": false,
     "display_type": "inky",

@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import socket
 
 
 class KioskConfig:
@@ -17,10 +18,26 @@ class KioskConfig:
     def __init__(self):
         with open(self.config_file) as f:
             self.config = json.load(f)
+        # runtime-only override (e.g. --dev forcing the mock display); kept
+        # out of self.config so a UI save can't accidentally persist it
+        self.display_type_override = None
 
     def save(self):
         with open(self.config_file, 'w') as f:
             json.dump(self.config, f, indent=4)
+
+    @property
+    def mode(self):
+        """"kiosk" = screenshot config.url on an interval (the default).
+        "receiver" = idle and wait for images pushed to POST /api/display
+        (e.g. from Home Assistant)."""
+        return self.config.get("mode", "kiosk")
+
+    @property
+    def device_id(self):
+        """Identifier for this frame, so an external sender (Home Assistant)
+        can tell multiple frames apart. Defaults to the hostname."""
+        return self.config.get("device_id") or socket.gethostname()
 
     @property
     def url(self):
@@ -40,7 +57,7 @@ class KioskConfig:
 
     @property
     def display_type(self):
-        return self.config.get("display_type", "inky")
+        return self.display_type_override or self.config.get("display_type", "inky")
 
     @property
     def refresh_interval_seconds(self):

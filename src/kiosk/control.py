@@ -14,6 +14,7 @@ class RunnerControl:
         self._lock = threading.Lock()
         self.stop_requested = False
         self.manual_refresh_requested = False
+        self._pending_image = None
 
         self.last_attempt_at = None
         self.last_success_at = None
@@ -29,6 +30,20 @@ class RunnerControl:
 
     def notify_config_changed(self):
         self._wake_event.set()
+
+    def submit_image(self, image):
+        """Hands a pushed image (receiver mode) to the runner thread for
+        display. Only the latest image is kept if several arrive before the
+        runner picks one up - a photo frame only ever shows the newest."""
+        with self._lock:
+            self._pending_image = image
+        self._wake_event.set()
+
+    def take_pending_image(self):
+        with self._lock:
+            image = self._pending_image
+            self._pending_image = None
+            return image
 
     def wait(self, timeout):
         """Sleeps until timeout or until woken early; clears the wake flag."""

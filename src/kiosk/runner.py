@@ -64,7 +64,31 @@ def run(config, display_manager, control):
         if manual:
             control.manual_refresh_requested = False
 
-        if not manual and not config.is_active_now():
+        pushed_image = control.take_pending_image()
+
+        if pushed_image is not None:
+            # An externally pushed image (receiver mode / POST /api/display).
+            # An explicit push always displays right away - it bypasses
+            # active_hours, and only the hash check is kept to spare the
+            # panel if the exact same image is re-sent.
+            try:
+                image_hash = compute_image_hash(pushed_image)
+                if image_hash != last_image_hash:
+                    logger.info("Displaying pushed image")
+                    _display_with_timeout(display_manager, pushed_image)
+                    last_image_hash = image_hash
+                else:
+                    logger.info("Pushed image identical to current, skipping display refresh")
+                control.record_attempt(success=True)
+            except Exception as e:
+                logger.exception("Exception displaying pushed image")
+                control.record_attempt(success=False, error=str(e))
+
+        elif config.mode == "receiver":
+            # Nothing to do until something POSTs an image to /api/display.
+            pass
+
+        elif not manual and not config.is_active_now():
             logger.info(f"Outside active_hours ({config.active_hours}), skipping refresh")
         else:
             try:

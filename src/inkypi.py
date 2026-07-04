@@ -33,7 +33,7 @@ PORT = 8080 if args.dev else 80
 if __name__ == '__main__':
     config = KioskConfig()
     if args.dev:
-        config.config["display_type"] = "mock"
+        config.display_type_override = "mock"
 
     display_manager = DisplayManager(config)
     control = RunnerControl()
