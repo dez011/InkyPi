@@ -66,7 +66,14 @@ class WaveshareDisplay(AbstractDisplay):
             display_args = display_args_spec.args
         except ModuleNotFoundError as e:
             if e.name == module_name:
-                raise ValueError(f"Unsupported Waveshare display type: {display_type}")
+                available = sorted(
+                    p.stem for p in epd_dir.glob("epd*.py")
+                )
+                raise ValueError(
+                    f"Unsupported Waveshare display type: '{display_type}' "
+                    f"(no {module_name}.py). Drivers available in {epd_dir}: "
+                    f"{available or 'none - fetch one via install.sh -W <model>'}"
+                )
             # the epd module itself imported fine but one of its own dependencies
             # (e.g. gpiozero) is missing - don't mask that as "unsupported display".
             raise ValueError(
