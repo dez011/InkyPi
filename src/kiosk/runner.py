@@ -20,7 +20,11 @@ def _display_with_timeout(display_manager, image, timeout_seconds=DISPLAY_TIMEOU
     def _target():
         try:
             display_manager.display_image(image)
-        except Exception as e:
+            result["ok"] = True
+        except BaseException as e:
+            # BaseException, not Exception: Pimoroni's gpiodevice raises
+            # SystemExit on GPIO errors, which threading swallows silently -
+            # the thread just vanishes and the failure never gets logged.
             result["error"] = e
 
     worker = threading.Thread(target=_target, daemon=True)
@@ -34,7 +38,14 @@ def _display_with_timeout(display_manager, image, timeout_seconds=DISPLAY_TIMEOU
             f"being left running in the background."
         )
     if "error" in result:
-        raise result["error"]
+        err = result["error"]
+        if isinstance(err, Exception):
+            raise err
+        # convert SystemExit/KeyboardInterrupt into a normal error so the
+        # refresh loop's own thread doesn't get silently killed re-raising it
+        raise RuntimeError(f"Display update aborted with {type(err).__name__}: {err}")
+    if "ok" not in result:
+        raise RuntimeError("Display worker thread ended without success or error")
 
 
 def run(config, display_manager, control):

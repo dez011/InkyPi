@@ -6,8 +6,10 @@
 #              the InkyPI service.
 #
 # Usage: ./install.sh [-W <waveshare_device>]
-#        -W <waveshare_device> (optional) Waveshare device model type,
-#                               e.g. epd7in3f. Defaults to epd7in3f.
+#        -W <waveshare_device> (optional) Install for a Waveshare device,
+#                               specifying the model type, e.g. epd7in3f.
+#                               If not specified, a Pimoroni Inky display
+#                               (auto-detected via EEPROM) is assumed.
 # =============================================================================
 
 # Formatting stuff
@@ -38,7 +40,8 @@ APT_REQUIREMENTS_FILE="$SCRIPT_DIR/debian-requirements.txt"
 PIP_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
 
 # Waveshare display model, per the WS naming convention (display.waveshare_epd.<model>).
-WS_TYPE="epd7in3f"
+# Empty means Inky (the default); set via -W for Waveshare panels.
+WS_TYPE=""
 WS_REQUIREMENTS_FILE="$SCRIPT_DIR/ws-requirements.txt"
 
 # Parse the agumments, looking for the -W option.
@@ -110,18 +113,28 @@ enable_interfaces(){
   sudo raspi-config nonint do_i2c 0
   echo_success "\tI2C Interface has been enabled."
 
-  # Ensure both CS lines are enabled in config.txt, as required by Waveshare displays.
-  # Remove any single-CS overlay left over from an older Inky-targeted install -
-  # having both active at once is contradictory and breaks SPI communication.
-  if grep -E -q '^[[:space:]]*dtoverlay=spi0-0cs' /boot/firmware/config.txt; then
-      echo "Removing conflicting single-CS overlay (dtoverlay=spi0-0cs)"
-      sed -i '/^dtoverlay=spi0-0cs$/d' /boot/firmware/config.txt
-  fi
-  echo "Enabling both CS lines for SPI interface in config.txt"
-  if ! grep -E -q '^[[:space:]]*dtoverlay=spi0-2cs' /boot/firmware/config.txt; then
-      sed -i '/^dtparam=spi=on/a dtoverlay=spi0-2cs' /boot/firmware/config.txt
+  # The SPI chip-select overlay differs by display brand, and the two variants
+  # conflict with each other - only one may be active:
+  #  - Waveshare needs both kernel-driven CS lines (spi0-2cs)
+  #  - Inky drives CS itself via GPIO8, so the kernel must NOT claim it
+  #    (spi0-0cs). With a kernel-claimed CS pin, the inky library's GPIO
+  #    request fails at display time.
+  if [[ -n "$WS_TYPE" ]]; then
+    WANT_OVERLAY="spi0-2cs"
+    DROP_OVERLAY="spi0-0cs"
   else
-      echo "dtoverlay for spi0-2cs already specified"
+    WANT_OVERLAY="spi0-0cs"
+    DROP_OVERLAY="spi0-2cs"
+  fi
+  if grep -E -q "^[[:space:]]*dtoverlay=$DROP_OVERLAY" /boot/firmware/config.txt; then
+      echo "Removing conflicting overlay (dtoverlay=$DROP_OVERLAY)"
+      sed -i "/^dtoverlay=$DROP_OVERLAY$/d" /boot/firmware/config.txt
+  fi
+  echo "Enabling dtoverlay=$WANT_OVERLAY in config.txt"
+  if ! grep -E -q "^[[:space:]]*dtoverlay=$WANT_OVERLAY" /boot/firmware/config.txt; then
+      sed -i "/^dtparam=spi=on/a dtoverlay=$WANT_OVERLAY" /boot/firmware/config.txt
+  else
+      echo "dtoverlay for $WANT_OVERLAY already specified"
   fi
 }
 
@@ -193,9 +206,11 @@ create_venv(){
   $VENV_PATH/bin/python -m pip install -r $PIP_REQUIREMENTS_FILE -qq > /dev/null &
   show_loader "\tInstalling python dependencies. "
 
-  echo "Adding Waveshare GPIO dependencies to the python virtual environment. "
-  $VENV_PATH/bin/python -m pip install -r $WS_REQUIREMENTS_FILE > ws_pip_install.log &
-  show_loader "\tInstalling Waveshare python dependencies. "
+  if [[ -n "$WS_TYPE" ]]; then
+    echo "Adding Waveshare GPIO dependencies to the python virtual environment. "
+    $VENV_PATH/bin/python -m pip install -r $WS_REQUIREMENTS_FILE > ws_pip_install.log &
+    show_loader "\tInstalling Waveshare python dependencies. "
+  fi
 }
 
 install_app_service() {
@@ -217,12 +232,14 @@ install_executable() {
 }
 
 #
-# Sets display_type in kiosk/config.json to the Waveshare model being installed.
+# Sets display_type in kiosk/config.json to the display being installed:
+# the Waveshare model if -W was given, otherwise "inky" (auto-detected).
 #
 update_config() {
   local KIOSK_CONFIG="$SRC_PATH/kiosk/config.json"
-  sed -i "s/\"display_type\": \".*\"/\"display_type\": \"$WS_TYPE\"/" "$KIOSK_CONFIG"
-  echo "Updated display_type to: $WS_TYPE"
+  local DISPLAY_TYPE="${WS_TYPE:-inky}"
+  sed -i "s/\"display_type\": \".*\"/\"display_type\": \"$DISPLAY_TYPE\"/" "$KIOSK_CONFIG"
+  echo "Updated display_type to: $DISPLAY_TYPE"
 }
 
 stop_service() {
@@ -278,11 +295,13 @@ ask_for_reboot() {
   fi
 }
 
-# -W overrides the default Waveshare model (epd7in3f).
+# No arguments = Inky (auto-detected); -W <model> = Waveshare.
 parse_arguments "$@"
 check_permissions
 stop_service
-fetch_waveshare_driver
+if [[ -n "$WS_TYPE" ]]; then
+  fetch_waveshare_driver
+fi
 enable_interfaces
 install_debian_dependencies
 setup_memory_management
