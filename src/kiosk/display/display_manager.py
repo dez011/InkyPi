@@ -17,9 +17,16 @@ class DisplayManager:
         display_type = device_config.display_type
 
         if display_type == "mock":
+            logger.warning(
+                "display_type is 'mock' - screenshots will be written to disk only and "
+                "will NOT be sent to the physical panel. Set \"display_type\" in "
+                "src/kiosk/config.json to your Waveshare model (e.g. \"epd7in3e\") to "
+                "drive real hardware."
+            )
             self.display = MockDisplay(device_config)
         elif fnmatch.fnmatch(display_type, "epd*in*"):
             # derived from waveshare epd - see https://github.com/waveshareteam/e-Paper
+            logger.info(f"Using Waveshare display driver: {display_type}")
             self.display = WaveshareDisplay(device_config)
         else:
             raise ValueError(f"Unsupported display type: {display_type}")
