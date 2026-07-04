@@ -1,8 +1,40 @@
 import logging
+import threading
 
 from kiosk.image import take_screenshot, compute_image_hash
 
 logger = logging.getLogger(__name__)
+
+DISPLAY_TIMEOUT_SECONDS = 90
+
+
+def _display_with_timeout(display_manager, image, timeout_seconds=DISPLAY_TIMEOUT_SECONDS):
+    """Runs display_manager.display_image() in a worker thread with a hard
+    deadline, so a hung hardware call (e.g. a busy-pin wait that never
+    resolves) can't block the refresh loop forever. If it times out, the
+    worker thread is abandoned (Python can't forcibly kill a thread) and an
+    error is raised so the next cycle tries again fresh.
+    """
+    result = {}
+
+    def _target():
+        try:
+            display_manager.display_image(image)
+        except Exception as e:
+            result["error"] = e
+
+    worker = threading.Thread(target=_target, daemon=True)
+    worker.start()
+    worker.join(timeout=timeout_seconds)
+
+    if worker.is_alive():
+        raise TimeoutError(
+            f"Display update did not finish within {timeout_seconds}s - abandoning "
+            f"this attempt (possible hardware hang). The stuck worker thread is "
+            f"being left running in the background."
+        )
+    if "error" in result:
+        raise result["error"]
 
 
 def run(config, display_manager, control):
@@ -39,7 +71,7 @@ def run(config, display_manager, control):
                     image_hash = compute_image_hash(image)
                     if image_hash != last_image_hash or manual:
                         logger.info("Updating display")
-                        display_manager.display_image(image)
+                        _display_with_timeout(display_manager, image)
                         last_image_hash = image_hash
                     else:
                         logger.info("Screenshot unchanged, skipping display refresh")

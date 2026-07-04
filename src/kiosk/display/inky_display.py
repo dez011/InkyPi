@@ -27,8 +27,11 @@ class InkyDisplay(AbstractDisplay):
             ValueError: If the resolution cannot be retrieved or stored.
         """
         
-        self.inky_display = auto()
+        logger.info("Calling inky.auto.auto() to detect the connected board via EEPROM")
+        self.inky_display = auto(verbose=True)
+        logger.info(f"auto() returned {type(self.inky_display).__name__}")
         self.inky_display.set_border(self.inky_display.BLACK)
+        logger.info("set_border() done")
 
         # cross-check the configured resolution against the panel's native one
         panel_resolution = (int(self.inky_display.width), int(self.inky_display.height))
@@ -59,5 +62,8 @@ class InkyDisplay(AbstractDisplay):
             raise ValueError(f"No image provided.")
 
         # Display the image on the Inky display
+        logger.info("Calling set_image()")
         self.inky_display.set_image(image)
+        logger.info("set_image() done, calling show() - this is the slow hardware refresh step")
         self.inky_display.show()
+        logger.info("show() returned - refresh complete")

@@ -7,8 +7,14 @@ logging.config.fileConfig(os.path.join(os.path.dirname(__file__), 'config', 'log
 import argparse
 import logging
 import threading
+import warnings
 
 from waitress import serve
+
+# surface every warning (e.g. the inky library's "Busy Wait: Timed out")
+# in the log every time it happens, not just once per call site
+logging.captureWarnings(True)
+warnings.simplefilter("always")
 
 from kiosk.config import KioskConfig
 from kiosk.control import RunnerControl
