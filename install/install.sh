@@ -6,11 +6,8 @@
 #              the InkyPI service.
 #
 # Usage: ./install.sh [-W <waveshare_device>]
-#        -W <waveshare_device> (optional) Install for a Waveshare device, 
-#                               specifying the device model type, e.g. epd7in3e.
-#
-#                               If not specified then the Pimoroni Inky display
-#                               is assumed.
+#        -W <waveshare_device> (optional) Waveshare device model type,
+#                               e.g. epd7in3e. Defaults to epd7in3e.
 # =============================================================================
 
 # Formatting stuff
@@ -40,12 +37,8 @@ SERVICE_FILE_TARGET="/etc/systemd/system/$SERVICE_FILE"
 APT_REQUIREMENTS_FILE="$SCRIPT_DIR/debian-requirements.txt"
 PIP_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
 
-# 
-# Additional requirements for Waveshare support.
-#
-# empty means no WS support required, otherwise we expect the type of display
-# as per the WS naming convention.
-WS_TYPE=""
+# Waveshare display model, per the WS naming convention (display.waveshare_epd.<model>).
+WS_TYPE="epd7in3e"
 WS_REQUIREMENTS_FILE="$SCRIPT_DIR/ws-requirements.txt"
 
 # Parse the agumments, looking for the -W option.
@@ -76,7 +69,7 @@ check_permissions() {
 fetch_waveshare_driver() {
   echo "Fetching Waveshare driver for: $WS_TYPE"
 
-  DRIVER_DEST="$SRC_PATH/display/waveshare_epd"
+  DRIVER_DEST="$SRC_PATH/kiosk/display/waveshare_epd"
   DRIVER_FILE="$DRIVER_DEST/$WS_TYPE.py"
   DRIVER_URL="https://raw.githubusercontent.com/waveshareteam/e-Paper/master/RaspberryPi_JetsonNano/python/lib/waveshare_epd/$WS_TYPE.py"
 
@@ -117,27 +110,13 @@ enable_interfaces(){
   sudo raspi-config nonint do_i2c 0
   echo_success "\tI2C Interface has been enabled."
 
-  # Is a Waveshare device specified as an install parameter?
-  if [[ -n "$WS_TYPE" ]]; then
-    # WS parameter is set for Waveshare support so ensure that both CS lines
-    # are enabled in the config.txt file.  This is different to INKY which
-    # only needs one line set.n
-    echo "Enabling both CS lines for SPI interface in config.txt"
-    if ! grep -E -q '^[[:space:]]*dtoverlay=spi0-2cs' /boot/firmware/config.txt; then
-        sed -i '/^dtparam=spi=on/a dtoverlay=spi0-2cs' /boot/firmware/config.txt
-    else
-        echo "dtoverlay for spi0-2cs already specified"
-    fi
+  # Ensure both CS lines are enabled in config.txt, as required by Waveshare displays.
+  echo "Enabling both CS lines for SPI interface in config.txt"
+  if ! grep -E -q '^[[:space:]]*dtoverlay=spi0-2cs' /boot/firmware/config.txt; then
+      sed -i '/^dtparam=spi=on/a dtoverlay=spi0-2cs' /boot/firmware/config.txt
   else
-    # TODO - check if really need the dtparam set for INKY as this seems to be 
-    # only for the older screens (as per INKY docs)
-    echo "Enabling single CS line for SPI interface in config.txt"
-    if ! grep -E -q '^[[:space:]]*dtoverlay=spi0-0cs' /boot/firmware/config.txt; then
-        sed -i '/^dtparam=spi=on/a dtoverlay=spi0-0cs' /boot/firmware/config.txt
-    else
-        echo "dtoverlay for spi0-0cs already specified"
-    fi
-  fi 
+      echo "dtoverlay for spi0-2cs already specified"
+  fi
 }
 
 show_loader() {
@@ -208,13 +187,9 @@ create_venv(){
   $VENV_PATH/bin/python -m pip install -r $PIP_REQUIREMENTS_FILE -qq > /dev/null &
   show_loader "\tInstalling python dependencies. "
 
-  # do additional dependencies for Waveshare support.
-  if [[ -n "$WS_TYPE" ]]; then
-    echo "Adding additional dependencies for waveshare to the python virtual environment. "
-    $VENV_PATH/bin/python -m pip install -r $WS_REQUIREMENTS_FILE > ws_pip_install.log &
-    show_loader "\tInstalling additional Waveshare python dependencies. "
-  fi
-
+  echo "Adding Waveshare GPIO dependencies to the python virtual environment. "
+  $VENV_PATH/bin/python -m pip install -r $WS_REQUIREMENTS_FILE > ws_pip_install.log &
+  show_loader "\tInstalling Waveshare python dependencies. "
 }
 
 install_app_service() {
@@ -235,43 +210,13 @@ install_executable() {
   sudo chmod +x $BINPATH/$APPNAME
 }
 
-install_config() {
-  CONFIG_BASE_DIR="$SCRIPT_DIR/config_base"
-  CONFIG_DIR="$SRC_PATH/config"
-  echo "Copying config files to $CONFIG_DIR"
-
-  # Check and copy device.config if it doesn't exist
-  if [ ! -f "$CONFIG_DIR/device.json" ]; then
-    cp "$CONFIG_BASE_DIR/device.json" "$CONFIG_DIR/"
-    show_loader "\tCopying device.config to $CONFIG_DIR"
-  else
-    echo_success "\tdevice.json already exists in $CONFIG_DIR"
-  fi
-}
-
 #
-# Update the device.json file with the supplied Waveshare parameter (if set).
+# Sets display_type in kiosk/config.json to the Waveshare model being installed.
 #
 update_config() {
-  if [[ -n "$WS_TYPE" ]]; then
-      local DEVICE_JSON="$CONFIG_DIR/device.json"
-
-      if grep -q '"display_type":' "$DEVICE_JSON"; then
-          # Update existing display_type value
-          sed -i "s/\"display_type\": \".*\"/\"display_type\": \"$WS_TYPE\"/" "$DEVICE_JSON"
-          echo "Updated display_type to: $WS_TYPE" 
-      else
-          # Append display_type safely, ensuring proper comma placement
-          if grep -q '}$' "$DEVICE_JSON"; then
-              sed -i '$s/}/,/' "$DEVICE_JSON"  # Replace last } with a comma
-          fi
-          echo "  \"display_type\": \"$WS_TYPE\"" >> "$DEVICE_JSON"
-          echo "}" >> "$DEVICE_JSON"  # Add trailing }
-          echo "Added display_type: $WS_TYPE"
-      fi
-  else
-      echo "Config not updated as WS_TYPE flag is not set"
-  fi
+  local KIOSK_CONFIG="$SRC_PATH/kiosk/config.json"
+  sed -i "s/\"display_type\": \".*\"/\"display_type\": \"$WS_TYPE\"/" "$KIOSK_CONFIG"
+  echo "Updated display_type to: $WS_TYPE"
 }
 
 stop_service() {
@@ -304,25 +249,12 @@ copy_project() {
   show_loader "\tCreating symlink from $SRC_PATH to $INSTALL_PATH/src"
 }
 
-# Get Raspberry Pi hostname
-get_hostname() {
-  echo "$(hostname)"
-}
-
-# Get Raspberry Pi IP address
-get_ip_address() {
-  ip_address=$(hostname -I | awk '{print $1}')
-  echo "$ip_address"
-}
-
 ask_for_reboot() {
-  # Get hostname and IP address
-  hostname=$(get_hostname)
-  ip_address=$(get_ip_address)
+  hostname=$(hostname)
+  ip_address=$(hostname -I | awk '{print $1}')
   echo_header "$(echo_success "${APPNAME^^} Installation Complete!")"
   echo_header "[•] A reboot of your Raspberry Pi is required for the changes to take effect"
-  echo_header "[•] After your Pi is rebooted, you can access the web UI by going to $(echo_blue "'$hostname.local'") or $(echo_blue "'$ip_address'") in your browser."
-  echo_header "[•] If you encounter any issues or have suggestions, please submit them here: https://github.com/fatihak/InkyPi/issues"
+  echo_header "[•] After your Pi is rebooted, you can access the kiosk UI by going to $(echo_blue "'$hostname.local'") or $(echo_blue "'$ip_address'") in your browser."
 
   read -p "Would you like to restart your Raspberry Pi now? [Y/N] " userInput
   userInput="${userInput^^}"
@@ -340,25 +272,17 @@ ask_for_reboot() {
   fi
 }
 
-# check if we have an argument for WS display support.  Parameter is not required
-# to maintain default INKY display support.
+# -W overrides the default Waveshare model (epd7in3e).
 parse_arguments "$@"
 check_permissions
 stop_service
-# fetch the WS display driver if defined.
-if [[ -n "$WS_TYPE" ]]; then
-  fetch_waveshare_driver
-fi
+fetch_waveshare_driver
 enable_interfaces
 install_debian_dependencies
 setup_memory_management
 copy_project
 create_venv
 install_executable
-install_config
-# update the config file with additional WS if defined.
-if [[ -n "$WS_TYPE" ]]; then
-  update_config
-fi
+update_config
 install_app_service
 ask_for_reboot

@@ -1,0 +1,18 @@
+{
+    "url": "http://192.168.1.169:3000",
+    "resolution": [800, 480],
+    "orientation": "horizontal",
+    "inverted_image": false,
+    "display_type": "mock",
+    "refresh_interval_seconds": 180,
+    "active_hours": {
+        "start": "07:00",
+        "end": "23:00"
+    },
+    "image_settings": {
+        "saturation": 1.0,
+        "brightness": 1.0,
+        "sharpness": 1.0,
+        "contrast": 1.0
+    }
+}
