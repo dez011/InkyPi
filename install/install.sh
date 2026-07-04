@@ -7,7 +7,7 @@
 #
 # Usage: ./install.sh [-W <waveshare_device>]
 #        -W <waveshare_device> (optional) Waveshare device model type,
-#                               e.g. epd7in3e. Defaults to epd7in3e.
+#                               e.g. epd7in3f. Defaults to epd7in3f.
 # =============================================================================
 
 # Formatting stuff
@@ -38,7 +38,7 @@ APT_REQUIREMENTS_FILE="$SCRIPT_DIR/debian-requirements.txt"
 PIP_REQUIREMENTS_FILE="$SCRIPT_DIR/requirements.txt"
 
 # Waveshare display model, per the WS naming convention (display.waveshare_epd.<model>).
-WS_TYPE="epd7in3e"
+WS_TYPE="epd7in3f"
 WS_REQUIREMENTS_FILE="$SCRIPT_DIR/ws-requirements.txt"
 
 # Parse the agumments, looking for the -W option.
@@ -272,7 +272,7 @@ ask_for_reboot() {
   fi
 }
 
-# -W overrides the default Waveshare model (epd7in3e).
+# -W overrides the default Waveshare model (epd7in3f).
 parse_arguments "$@"
 check_permissions
 stop_service

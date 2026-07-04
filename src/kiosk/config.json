@@ -3,7 +3,7 @@
     "resolution": [800, 480],
     "orientation": "horizontal",
     "inverted_image": false,
-    "display_type": "epd7in3e",
+    "display_type": "epd7in3f",
     "refresh_interval_seconds": 180,
     "active_hours": {
         "start": "00:30",

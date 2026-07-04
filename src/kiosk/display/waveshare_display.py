@@ -64,8 +64,16 @@ class WaveshareDisplay(AbstractDisplay):
 
             display_args_spec = inspect.getfullargspec(self.epd_display.display)
             display_args = display_args_spec.args
-        except ModuleNotFoundError:
-            raise ValueError(f"Unsupported Waveshare display type: {display_type}")
+        except ModuleNotFoundError as e:
+            if e.name == module_name:
+                raise ValueError(f"Unsupported Waveshare display type: {display_type}")
+            # the epd module itself imported fine but one of its own dependencies
+            # (e.g. gpiozero) is missing - don't mask that as "unsupported display".
+            raise ValueError(
+                f"Waveshare driver '{display_type}' is missing a dependency: "
+                f"'{e.name}' is not installed. Run: "
+                f"pip install -r install/ws-requirements.txt"
+            )
         except AttributeError:
             raise ValueError(f"Display does not support required methods: {display_type}")
 
