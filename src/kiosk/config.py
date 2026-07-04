@@ -40,7 +40,7 @@ class KioskConfig:
 
     @property
     def display_type(self):
-        return self.config.get("display_type", "epd7in3e")
+        return self.config.get("display_type", "inky")
 
     @property
     def refresh_interval_seconds(self):

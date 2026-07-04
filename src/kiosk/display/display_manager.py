@@ -7,6 +7,11 @@ from kiosk.display.waveshare_display import WaveshareDisplay
 
 logger = logging.getLogger(__name__)
 
+try:
+    from kiosk.display.inky_display import InkyDisplay
+except ImportError:
+    InkyDisplay = None
+
 
 class DisplayManager:
     """Manages the display and rendering of images.
@@ -35,6 +40,14 @@ class DisplayManager:
                     "drive real hardware."
                 )
                 self.display = MockDisplay(self.device_config)
+            elif display_type == "inky":
+                if InkyDisplay is None:
+                    raise ValueError(
+                        "display_type is 'inky' but the 'inky' package is not installed. "
+                        "Run: pip install -r install/requirements.txt"
+                    )
+                logger.info("Using Inky display driver (auto-detected)")
+                self.display = InkyDisplay(self.device_config)
             elif fnmatch.fnmatch(display_type, "epd*in*"):
                 # derived from waveshare epd - see https://github.com/waveshareteam/e-Paper
                 logger.info(f"Using Waveshare display driver: {display_type}")
