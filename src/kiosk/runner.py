@@ -1,11 +1,46 @@
 import logging
 import threading
+import time
 
-from kiosk.image import take_screenshot, compute_image_hash
+from kiosk.image import take_screenshot, compute_image_hash, is_mostly_solid
 
 logger = logging.getLogger(__name__)
 
 DISPLAY_TIMEOUT_SECONDS = 90
+BLANK_RETRY_DELAY_SECONDS = 10
+
+
+def _take_kiosk_screenshot(config):
+    """Captures the kiosk URL, guarding against blank/loading screens.
+
+    If the capture is overwhelmingly one solid color (a loading spinner or
+    error page rather than a photo), waits briefly and retries once - the
+    page was likely mid-load. If the retry still looks blank, returns an
+    error instead of the image, so the panel keeps its last real photo
+    rather than displaying a loading screen for a whole cycle.
+
+    Returns (image, error): exactly one is non-None.
+    """
+    dimensions = config.get_resolution()
+    if config.orientation == "vertical":
+        dimensions = dimensions[::-1]
+
+    logger.info(f"Taking screenshot of url: {config.url}")
+    image = take_screenshot(config.url, dimensions, timeout_ms=40000)
+    if image is None:
+        return None, "Failed to take screenshot"
+    if not is_mostly_solid(image):
+        return image, None
+
+    logger.info(
+        f"Screenshot is mostly one solid color (loading screen?) - "
+        f"retrying once in {BLANK_RETRY_DELAY_SECONDS}s"
+    )
+    time.sleep(BLANK_RETRY_DELAY_SECONDS)
+    retry = take_screenshot(config.url, dimensions, timeout_ms=40000)
+    if retry is not None and not is_mostly_solid(retry):
+        return retry, None
+    return None, "Screenshot looks like a blank/loading screen; kept last image"
 
 
 def _display_with_timeout(display_manager, image, timeout_seconds=DISPLAY_TIMEOUT_SECONDS):
@@ -92,16 +127,11 @@ def run(config, display_manager, control):
             logger.info(f"Outside active_hours ({config.active_hours}), skipping refresh")
         else:
             try:
-                dimensions = config.get_resolution()
-                if config.orientation == "vertical":
-                    dimensions = dimensions[::-1]
-
-                logger.info(f"Taking screenshot of url: {config.url}")
-                image = take_screenshot(config.url, dimensions, timeout_ms=40000)
+                image, error = _take_kiosk_screenshot(config)
 
                 if image is None:
-                    logger.error("Failed to take screenshot, will retry next cycle")
-                    control.record_attempt(success=False, error="Failed to take screenshot")
+                    logger.error(f"{error}, will retry next cycle")
+                    control.record_attempt(success=False, error=error)
                 else:
                     image_hash = compute_image_hash(image)
                     if image_hash != last_image_hash or manual:

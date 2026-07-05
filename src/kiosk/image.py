@@ -77,6 +77,21 @@ def compute_image_hash(image):
     return hashlib.sha256(img_bytes).hexdigest()
 
 
+def is_mostly_solid(image, threshold=0.90):
+    """True if at least `threshold` of pixels fall in one coarse color bucket.
+
+    That's the signature of a blank/loading/error page (flat background with
+    a small spinner or message) rather than real content - photographs
+    essentially never concentrate 90% of pixels into a single color.
+    """
+    small = image.convert("RGB").resize((100, 60))
+    buckets = {}
+    for r, g, b in small.getdata():
+        key = (r >> 4, g >> 4, b >> 4)
+        buckets[key] = buckets.get(key, 0) + 1
+    return max(buckets.values()) / (100 * 60) >= threshold
+
+
 def take_screenshot(target, dimensions, timeout_ms=None):
     image = None
     try:
