@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+import signal
 import subprocess
 import tempfile
 
@@ -104,12 +105,32 @@ def take_screenshot(target, dimensions, timeout_ms=None):
         ]
         if timeout_ms:
             command.append(f"--timeout={timeout_ms}")
-        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        # chromium's --timeout flag only bounds page load; a wedged chromium
+        # process ignores it and would block here forever (observed: a hang
+        # froze the refresh loop for 3.5h). Enforce a hard wall-clock limit
+        # and kill the whole process group - chromium spawns a tree of
+        # helpers that would survive killing just the direct child.
+        hard_timeout_s = (timeout_ms / 1000 + 20) if timeout_ms else 60
+        proc = subprocess.Popen(
+            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            start_new_session=True,
+        )
+        try:
+            _, stderr = proc.communicate(timeout=hard_timeout_s)
+        except subprocess.TimeoutExpired:
+            logger.error(f"Screenshot timed out after {hard_timeout_s:.0f}s, killing chromium process tree")
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except (ProcessLookupError, PermissionError, AttributeError):
+                proc.kill()
+            proc.communicate()
+            return None
 
         # Check if the process failed or the output file is missing
-        if result.returncode != 0 or not os.path.exists(img_file_path):
+        if proc.returncode != 0 or not os.path.exists(img_file_path):
             logger.error("Failed to take screenshot:")
-            logger.error(result.stderr.decode('utf-8'))
+            logger.error(stderr.decode('utf-8'))
             return None
 
         # Load the image using PIL
